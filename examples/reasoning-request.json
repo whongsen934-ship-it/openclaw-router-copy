@@ -1,0 +1,10 @@
+{
+  "model": "auto",
+  "max_tokens": 600,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Analyze the root cause of a sudden increase in API latency. Compare database, network, and application-level causes, then propose a step-by-step investigation plan."
+    }
+  ]
+}
