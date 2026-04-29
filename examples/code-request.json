@@ -1,0 +1,10 @@
+{
+  "model": "auto",
+  "max_tokens": 300,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a JavaScript function that validates an email address and explain the edge cases briefly."
+    }
+  ]
+}
