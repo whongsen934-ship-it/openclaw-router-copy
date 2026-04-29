@@ -1,0 +1,23 @@
+name: Feature request
+labels: [enhancement]
+description: 建議新功能或改進
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: 功能建議
+      description: 你想加入咩功能？
+      placeholder: 例如：支援更多模型供應商、加入更詳細成本統計
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: 使用場景
+      description: 呢個功能可以解決咩問題？
+      placeholder: 例如：實驗室數據監測任務想自動區分日誌摘要同深度排錯
+  - type: textarea
+    id: design
+    attributes:
+      label: 可能設計
+      description: 如果你已有想法，可以寫低大概設計
