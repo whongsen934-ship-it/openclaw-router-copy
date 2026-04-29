@@ -1,0 +1,38 @@
+name: Bug report
+labels: [bug]
+description: 回報 OpenClaw Router 問題
+body:
+  - type: markdown
+    attributes:
+      value: |
+        多謝你回報問題。請盡量提供可重現資料，方便定位。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 問題描述
+      description: 發生咗咩問題？
+      placeholder: 例如：router 啟動後 /health 無回應
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      description: 請列出點樣重現問題
+      placeholder: |
+        1. 執行 bash scripts/install.sh
+        2. 執行 curl http://127.0.0.1:8402/health
+        3. 看到錯誤
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日誌或錯誤訊息
+      description: 可以貼 `journalctl -u openclaw-router -n 50` 或 Docker logs
+      render: shell
+  - type: input
+    id: environment
+    attributes:
+      label: 運行環境
+      placeholder: Ubuntu 22.04 / Node.js 20 / Docker 等
