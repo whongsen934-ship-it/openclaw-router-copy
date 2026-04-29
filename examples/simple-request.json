@@ -1,0 +1,10 @@
+{
+  "model": "auto",
+  "max_tokens": 80,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Say hello in one short sentence."
+    }
+  ]
+}
