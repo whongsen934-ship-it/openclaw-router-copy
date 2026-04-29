@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROUTER_DIR="$HOME/.openclaw/workspace/router"
+SERVICE_NAME="openclaw-router"
+PROVIDER_NAME="openclaw-router"
+PORT=8402
+
+echo "⚡ Installing openclaw-router..."
+
+mkdir -p "$ROUTER_DIR"
+cp "$PROJECT_DIR/server.js" "$ROUTER_DIR/server.js"
+
+if [ ! -f "$ROUTER_DIR/config.json" ]; then
+  cp "$PROJECT_DIR/config.json" "$ROUTER_DIR/config.json"
+  echo "  ✓ Copied default config.json"
+else
+  echo "  ✓ config.json already exists — preserved"
+fi
+
+echo "  ✓ Copied router files to $ROUTER_DIR"
+
+API_KEY=""
+AUTH_FILE="$HOME/.openclaw/agents/main/agent/auth-profiles.json"
+if [ -f "$AUTH_FILE" ]; then
+  API_KEY=$(grep -o '"key": "[^"]*"' "$AUTH_FILE" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
+fi
+
+if [ -z "$API_KEY" ]; then
+  echo ""
+  echo "  ⚠ Could not auto-detect Anthropic API key."
+  echo "  Edit /etc/systemd/system/$SERVICE_NAME.service and set ANTHROPIC_API_KEY manually."
+  API_KEY="sk-ant-YOUR-KEY-HERE"
+fi
+
+NODE_BIN=$(which node)
+sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << EOF
+[Unit]
+Description=openclaw-router - Cost-optimizing model routing for OpenClaw
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$NODE_BIN $ROUTER_DIR/server.js
+Environment=ANTHROPIC_API_KEY=$API_KEY
+Environment=ROUTER_CONFIG=$ROUTER_DIR/config.json
+Environment=ROUTER_PORT=$PORT
+Environment=ROUTER_LOG=1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "  ✓ Created systemd service"
+sudo systemctl daemon-reload
+sudo systemctl enable --now "$SERVICE_NAME"
+echo "  ✓ Service started on port $PORT"
+
+sleep 1
+if curl -sf "http://127.0.0.1:$PORT/health" > /dev/null 2>&1; then
+  echo "  ✓ Health check passed"
+else
+  echo "  ⚠ Service started but health check failed — check: journalctl -u $SERVICE_NAME -f"
+fi
+
+OPENCLAW_JSON="$HOME/.openclaw/openclaw.json"
+if [ -f "$OPENCLAW_JSON" ] && command -v python3 &> /dev/null; then
+  python3 - "$OPENCLAW_JSON" "$PORT" "$PROVIDER_NAME" << 'PYEOF'
+import json, sys
+
+config_path, port, provider_name = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(config_path) as f:
+    cfg = json.load(f)
+
+providers = cfg.setdefault("models", {}).setdefault("providers", {})
+if provider_name not in providers:
+    providers[provider_name] = {
+        "baseUrl": f"http://127.0.0.1:{port}",
+        "apiKey": "passthrough",
+        "api": "anthropic-messages",
+        "models": [{
+            "id": "auto",
+            "name": "OpenClaw Router (auto)",
+            "reasoning": True,
+            "input": ["text", "image"],
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            "contextWindow": 200000,
+            "maxTokens": 8192
+        }]
+    }
+    print("  ✓ Registered model provider in openclaw.json")
+else:
+    print("  ✓ Model provider already registered")
+
+model_id = f"{provider_name}/auto"
+models_allowlist = cfg.get("agents", {}).get("defaults", {}).get("models")
+if models_allowlist is not None and model_id not in models_allowlist:
+    models_allowlist[model_id] = {}
+    print("  ✓ Added openclaw-router/auto to model allowlist")
+
+with open(config_path, "w") as f:
+    json.dump(cfg, f, indent=2)
+    f.write("\n")
+PYEOF
+  echo ""
+  echo "  ⚠ Restart OpenClaw to pick up the new model provider:"
+  echo "    openclaw gateway restart"
+  echo "    # or: /config reload"
+else
+  echo ""
+  echo "  Now register the model in your OpenClaw session:"
+  echo ""
+  echo "  /config set models.providers.$PROVIDER_NAME.baseUrl http://127.0.0.1:$PORT"
+  echo "  /config set models.providers.$PROVIDER_NAME.api anthropic-messages"
+  echo "  /config set models.providers.$PROVIDER_NAME.apiKey passthrough"
+  echo '  /config set models.providers.openclaw-router.models [{"id":"auto","name":"OpenClaw Router (auto)","reasoning":true,"input":["text","image"],"contextWindow":200000,"maxTokens":8192}]'
+fi
+
+echo ""
+echo "  Then use: /model openclaw-router/auto"
+echo ""
+echo "⚡ Done! Check stats: curl http://127.0.0.1:$PORT/stats"
