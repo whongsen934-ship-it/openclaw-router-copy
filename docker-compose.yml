@@ -1,0 +1,12 @@
+services:
+  openclaw-router:
+    build: .
+    container_name: openclaw-router
+    ports:
+      - "8402:8402"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ROUTER_PORT: 8402
+      ROUTER_CONFIG: /app/config.json
+      ROUTER_LOG: 1
+    restart: unless-stopped
