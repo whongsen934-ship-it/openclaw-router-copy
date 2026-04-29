@@ -1,0 +1,24 @@
+{
+  "name": "openclaw-router",
+  "version": "0.1.0",
+  "description": "Local cost-optimizing model router for OpenClaw.",
+  "main": "server.js",
+  "type": "commonjs",
+  "bin": {
+    "openclaw-router": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "keywords": [
+    "openclaw",
+    "router",
+    "anthropic",
+    "openrouter",
+    "model-routing",
+    "llm"
+  ],
+  "author": "whongsen934-ship-it",
+  "license": "MIT"
+}
